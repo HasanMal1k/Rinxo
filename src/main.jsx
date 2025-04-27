@@ -1,18 +1,22 @@
-import { StrictMode } from 'react'
+import React, { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import './trading.css'
+
+// Import all components
 import Nav from './components/Nav'
 import Hero from './components/Hero'
+import Dashboard from './components/Dashboard'
 import CryptoDashboard from './components/CryptoDashboard'
 import CryptoTable from './components/CryptoTable'
 import HowItWorks from './components/HowItWorks'
 import WhatIsRinxo from './components/WhatIsRinxo'
 import Footer from './components/Footer'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Dashboard from './components/Dashboard'
 import Portfolio from './components/Portfolio'
 import TradingPage from './components/TradingPage'
+import Markets from './components/Markets'
+import BlogPage from './components/BlogPage'
 
 // HomePage component that combines all the sections
 const HomePage = () => (
@@ -45,6 +49,15 @@ const PortfolioPage = () => (
   </>
 )
 
+// MarketsPage component
+const MarketsPage = () => (
+  <>
+    <Nav />
+    <Markets />
+    <Footer />
+  </>
+)
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
@@ -53,7 +66,9 @@ createRoot(document.getElementById('root')).render(
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/portfolio" element={<PortfolioPage />} />
         <Route path="/trading" element={<TradingPage />} />
+        <Route path="/markets" element={<MarketsPage />} />
+        <Route path="/blog" element={<BlogPage />} />
       </Routes>
     </BrowserRouter>
-  </StrictMode>,
+  </StrictMode>
 )

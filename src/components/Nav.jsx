@@ -48,18 +48,20 @@ function Nav() {
           >
             Trading
           </Link>
-          <a href="#" className="text-white hidden lg:flex hover:-translate-y-[3px] hover:text-yellow-300 transition-all delay-100 hover:font-medium py-4 px-2">
-            Buy Crypto
-          </a>
-          <a href="#" className="text-white hidden lg:flex hover:-translate-y-[3px] hover:text-yellow-300 transition-all delay-100 hover:font-medium py-4 px-2">
-            Sell Crypto
-          </a>
-          <a href="#" className="text-white hidden lg:flex hover:-translate-y-[3px] hover:text-yellow-300 transition-all delay-100 hover:font-medium py-4 px-2">
+          <Link 
+            to="/markets" 
+            className={`text-white hidden lg:flex hover:-translate-y-[3px] transition-all delay-100 hover:font-medium py-4 px-2 ${isActive('/markets') ? 'text-yellow-300 font-medium' : 'hover:text-yellow-300'}`}
+          >
             Markets
-          </a>
-          <a href="#" className="text-white hidden lg:flex hover:-translate-y-[3px] hover:text-yellow-300 transition-all delay-100 hover:font-medium py-4 px-2">
+          </Link>
+          <Link 
+            to="/blog" 
+            className={`text-white hidden lg:flex hover:-translate-y-[3px] transition-all delay-100 hover:font-medium py-4 px-2 ${isActive('/blog') ? 'text-yellow-300 font-medium' : 'hover:text-yellow-300'}`}
+          >
             Blog
-          </a>
+          </Link>
+          
+          
           <button onClick={toggleMobileMenu}>
             {mobileMenuOpen ? (
               <X className="lg:hidden h-8" fill="white" />
@@ -104,18 +106,24 @@ function Nav() {
             >
               Trading
             </Link>
-            <a href="#" className="block w-full py-3 px-4 text-white">
-              Buy Crypto
-            </a>
-            <a href="#" className="block w-full py-3 px-4 text-white">
-              Sell Crypto
-            </a>
-            <a href="#" className="block w-full py-3 px-4 text-white">
+    
+            <Link 
+              to="/makrets" 
+              className={`block w-full py-3 px-4 text-white ${isActive('/markets') ? 'bg-gray-800 text-yellow-300' : ''}`}
+              onClick={() => setMobileMenuOpen(false)}
+            >
               Markets
-            </a>
-            <a href="#" className="block w-full py-3 px-4 text-white">
+            </Link>
+    
+            <Link 
+              to="/blog" 
+              className={`block w-full py-3 px-4 text-white ${isActive('/blog') ? 'bg-gray-800 text-yellow-300' : ''}`}
+              onClick={() => setMobileMenuOpen(false)}
+            >
               Blog
-            </a>
+            </Link>
+    
+            
           </div>
         </div>
       )}

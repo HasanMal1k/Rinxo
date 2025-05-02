@@ -1,6 +1,6 @@
 import React, { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './index.css'
 import './trading.css'
 
@@ -19,6 +19,18 @@ import Markets from './components/Markets'
 import BlogPage from './components/BlogPage'
 import AuthPage from './components/AuthPage'
 
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+  const user = localStorage.getItem('user');
+  
+  if (!user) {
+    // Redirect to login if no user is logged in
+    return <Navigate to="/login" replace />;
+  }
+  
+  return children;
+};
+
 // HomePage component that combines all the sections
 const HomePage = () => (
   <>
@@ -34,20 +46,20 @@ const HomePage = () => (
 
 // DashboardPage component with dashboard layout
 const DashboardPage = () => (
-  <>
+  <ProtectedRoute>
     <Nav />
     <Dashboard />
     <Footer />
-  </>
+  </ProtectedRoute>
 )
 
 // PortfolioPage component
 const PortfolioPage = () => (
-  <>
+  <ProtectedRoute>
     <Nav />
     <Portfolio />
     <Footer />
-  </>
+  </ProtectedRoute>
 )
 
 // MarketsPage component

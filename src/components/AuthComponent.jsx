@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Eye, EyeOff, ArrowRight, ChevronLeft, ChevronRight, Check, ArrowUpRight } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-const supabaseUrl = 'https://tyqxkphkcdmoznkhyuxm.supabase.co';
-
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5cXhrcGhrY2Rtb3pua2h5dXhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk4NjMwNTQsImV4cCI6MjA1NTQzOTA1NH0.kwA3f8Qs2pVSj2CSN9pq0Ih1fI4cUDyah_18BPSmIa0';
+const supabaseUrl = "https://tyqxkphkcdmoznkhyuxm.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5cXhrcGhrY2Rtb3pua2h5dXhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk4NjMwNTQsImV4cCI6MjA1NTQzOTA1NH0.kwA3f8Qs2pVSj2CSN9pq0Ih1fI4cUDyah_18BPSmIa0";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const AuthComponent = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Determine initial state based on route
+  const [isLogin, setIsLogin] = useState(location.pathname === '/login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -23,8 +27,21 @@ const AuthComponent = () => {
   const [gradientPosition, setGradientPosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
+    // Update login/signup state based on current route
+    setIsLogin(location.pathname === '/login');
+    
+    // Reset form when route changes
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setError(null);
+    setSuccess(false);
+    setCurrentStep(1);
+    setAgreeToTerms(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
     const handleMouseMove = (e) => {
-      // Calculate position relative to window size
       const x = e.clientX / window.innerWidth;
       const y = e.clientY / window.innerHeight;
       setGradientPosition({ x, y });
@@ -38,7 +55,8 @@ const AuthComponent = () => {
     background: `radial-gradient(circle at ${gradientPosition.x * 100}% ${gradientPosition.y * 100}%, rgba(66, 63, 255, 0.15) 0%, rgba(0, 0, 0, 0) 70%)`
   };
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
+    // Validation
     if (password !== confirmPassword) {
       setError("Passwords don't match");
       return;
@@ -53,16 +71,21 @@ const AuthComponent = () => {
     setError(null);
     
     try {
-      // This is where you would integrate with Supabase
-      // const { data, error } = await supabase.auth.signUp({
-      //   email,
-      //   password,
-      // });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
       
-      // For demo purposes, we'll simulate a successful response
+      if (error) {
+        throw error;
+      }
+      
+      setLoading(false);
+      setSuccess(true);
+      
+      // Redirect to dashboard after successful signup
       setTimeout(() => {
-        setLoading(false);
-        setSuccess(true);
+        navigate('/dashboard');
       }, 1500);
     } catch (error) {
       setLoading(false);
@@ -70,21 +93,26 @@ const AuthComponent = () => {
     }
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      // This is where you would integrate with Supabase
-      // const { data, error } = await supabase.auth.signInWithPassword({
-      //   email,
-      //   password,
-      // });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       
-      // For demo purposes, we'll simulate a successful response
+      if (error) {
+        throw error;
+      }
+      
+      setLoading(false);
+      setSuccess(true);
+      
+      // Redirect to dashboard after successful login
       setTimeout(() => {
-        setLoading(false);
-        setSuccess(true);
+        navigate('/dashboard');
       }, 1500);
     } catch (error) {
       setLoading(false);
@@ -107,10 +135,26 @@ const AuthComponent = () => {
   };
 
   const toggleView = () => {
-    setIsLogin(!isLogin);
-    setCurrentStep(1);
-    setError(null);
-    setSuccess(false);
+    // Toggle between login and signup
+    if (isLogin) {
+      navigate('/signup');
+    } else {
+      navigate('/login');
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+      });
+      
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      setError(error.message);
+    }
   };
 
   if (success) {
@@ -135,8 +179,9 @@ const AuthComponent = () => {
                 : 'Your RINXO account has been successfully created.'}
             </p>
             <button 
+              onClick={() => navigate('/')}
               className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center"
-            >
+            > 
               Go to Dashboard <ArrowRight className="ml-2 h-5 w-5" />
             </button>
           </div>
@@ -186,7 +231,7 @@ const AuthComponent = () => {
           )}
           
           {/* Step 1: Email */}
-          {(!isLogin && currentStep === 1) && (
+          {(!isLogin && currentStep === 1) || isLogin ? (
             <>
               <div className="space-y-1">
                 <label htmlFor="email" className="block text-sm font-medium text-gray-300">
@@ -202,18 +247,65 @@ const AuthComponent = () => {
                 />
               </div>
               
-              <button
-                type="button"
-                onClick={nextStep}
-                className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center"
-              >
-                Continue <ChevronRight className="ml-2 h-5 w-5" />
-              </button>
+              {!isLogin ? (
+                <button
+                  type="button"
+                  onClick={nextStep}
+                  className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center"
+                >
+                  Continue <ChevronRight className="ml-2 h-5 w-5" />
+                </button>
+              ) : (
+                <div className="space-y-1 mt-4">
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-300">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white pr-10"
+                      placeholder="••••••••••••"
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                  
+                  <div className="flex justify-between mt-2">
+                    <a href="#" className="text-sm text-yellow-400 hover:underline">
+                      Forgot password?
+                    </a>
+                  </div>
+                  
+                  <button
+                    type="button"
+                    onClick={handleLogin}
+                    className="w-full mt-4 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <svg className="animate-spin h-5 w-5 text-gray-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : (
+                      <>Sign In <ArrowRight className="ml-2 h-5 w-5" /></>
+                    )}
+                  </button>
+                </div>
+              )}
             </>
-          )}
+          ) : null}
           
           {/* Step 2: Password and Agreement */}
-          {(!isLogin && currentStep === 2) && (
+          {!isLogin && currentStep === 2 && (
             <>
               <div className="space-y-1">
                 <label htmlFor="password" className="block text-sm font-medium text-gray-300">
@@ -298,69 +390,6 @@ const AuthComponent = () => {
             </>
           )}
           
-          {/* Login Form */}
-          {isLogin && (
-            <>
-              <div className="space-y-1">
-                <label htmlFor="login-email" className="block text-sm font-medium text-gray-300">
-                  Email address
-                </label>
-                <input
-                  id="login-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white"
-                  placeholder="you@example.com"
-                />
-              </div>
-              
-              <div className="space-y-1">
-                <div className="flex justify-between">
-                  <label htmlFor="login-password" className="block text-sm font-medium text-gray-300">
-                    Password
-                  </label>
-                  <a href="#" className="text-sm text-yellow-400 hover:underline">
-                    Forgot password?
-                  </a>
-                </div>
-                <div className="relative">
-                  <input
-                    id="login-password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white pr-10"
-                    placeholder="••••••••••••"
-                  />
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
-              </div>
-              
-              <button
-                type="button"
-                onClick={handleLogin}
-                className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center"
-                disabled={loading}
-              >
-                {loading ? (
-                  <svg className="animate-spin h-5 w-5 text-gray-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                ) : (
-                  <>Sign In <ArrowRight className="ml-2 h-5 w-5" /></>
-                )}
-              </button>
-            </>
-          )}
-          
           {/* Error message */}
           {error && (
             <div className="bg-red-900/40 border border-red-500 text-red-200 px-4 py-3 rounded-lg">
@@ -397,6 +426,7 @@ const AuthComponent = () => {
           <div className="mt-6 grid grid-cols-3 gap-3">
             <button
               type="button"
+              onClick={handleGoogleSignIn}
               className="w-full inline-flex justify-center py-2 px-4 border border-gray-700 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors duration-300"
             >
               <svg className="h-5 w-5" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
@@ -423,20 +453,6 @@ const AuthComponent = () => {
             </button>
           </div>
         </div>
-      </div>
-      
-      {/* Bottom floating panel with stats */}
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-800/80 backdrop-blur-md px-6 py-3 rounded-full border border-gray-700 shadow-lg max-w-md w-full hidden md:flex justify-between items-center">
-        <div className="flex items-center">
-          <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-          <span className="text-white text-sm">Live: <span className="text-green-400">2,341</span> users online</span>
-        </div>
-        <div className="text-white text-sm hidden md:block">
-          Current BTC: <span className="text-yellow-400">$65,842.67</span>
-        </div>
-        <a href="#" className="text-yellow-400 text-sm font-medium flex items-center hover:underline">
-          Market Stats <ArrowUpRight className="ml-1 h-4 w-4" />
-        </a>
       </div>
     </div>
   );

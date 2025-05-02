@@ -17,6 +17,7 @@ import Portfolio from './components/Portfolio'
 import TradingPage from './components/TradingPage'
 import Markets from './components/Markets'
 import BlogPage from './components/BlogPage'
+import AuthPage from './components/AuthPage'
 
 // HomePage component that combines all the sections
 const HomePage = () => (
@@ -68,6 +69,8 @@ createRoot(document.getElementById('root')).render(
         <Route path="/trading" element={<TradingPage />} />
         <Route path="/markets" element={<MarketsPage />} />
         <Route path="/blog" element={<BlogPage />} />
+        <Route path="/login" element={<AuthPage />} />
+        <Route path="/signup" element={<AuthPage />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>

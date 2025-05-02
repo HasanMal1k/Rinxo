@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, User, LogIn } from 'lucide-react';
 
 function Nav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -61,6 +61,23 @@ function Nav() {
             Blog
           </Link>
           
+          {/* Auth Links */}
+          <div className="hidden lg:flex items-center ml-4 space-x-2">
+            <Link 
+              to="/login" 
+              className={`flex items-center px-3 py-2 rounded-lg ${isActive('/login') ? 'bg-gray-800 text-yellow-300' : 'text-white hover:bg-gray-800 transition-colors'}`}
+            >
+              <LogIn className="h-4 w-4 mr-1" />
+              Login
+            </Link>
+            <Link 
+              to="/signup" 
+              className="flex items-center px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-medium rounded-lg transition-colors"
+            >
+              <User className="h-4 w-4 mr-1" />
+              Sign Up
+            </Link>
+          </div>
           
           <button onClick={toggleMobileMenu}>
             {mobileMenuOpen ? (
@@ -108,7 +125,7 @@ function Nav() {
             </Link>
     
             <Link 
-              to="/makrets" 
+              to="/markets" 
               className={`block w-full py-3 px-4 text-white ${isActive('/markets') ? 'bg-gray-800 text-yellow-300' : ''}`}
               onClick={() => setMobileMenuOpen(false)}
             >
@@ -122,8 +139,26 @@ function Nav() {
             >
               Blog
             </Link>
-    
             
+            {/* Mobile Auth Links */}
+            <div className="border-t border-gray-800 my-2 pt-2">
+              <Link 
+                to="/login" 
+                className={`flex items-center w-full py-3 px-4 ${isActive('/login') ? 'bg-gray-800 text-yellow-300' : 'text-white'}`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <LogIn className="h-5 w-5 mr-2" />
+                Login
+              </Link>
+              <Link 
+                to="/signup" 
+                className={`flex items-center w-full py-3 px-4 bg-yellow-500 text-gray-900 mt-2 rounded`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <User className="h-5 w-5 mr-2" />
+                Sign Up
+              </Link>
+            </div>
           </div>
         </div>
       )}

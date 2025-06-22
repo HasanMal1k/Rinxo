@@ -180,6 +180,7 @@ const AuthComponent = () => {
             </p>
             <button 
               onClick={() => navigate('/')}
+              id='button2'
               className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center"
             > 
               Go to Dashboard <ArrowRight className="ml-2 h-5 w-5" />
@@ -286,6 +287,7 @@ const AuthComponent = () => {
                   
                   <button
                     type="button"
+                    id='button1'
                     onClick={handleLogin}
                     className="w-full mt-4 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center"
                     disabled={loading}

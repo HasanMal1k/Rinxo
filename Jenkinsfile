@@ -17,7 +17,7 @@ pipeline {
         stage('Build and Run with Docker Compose') {
             steps {
                 dir('Rinxo') {
-                    sh 'docker-compose -p thereactapp up -d --build'
+                    sh 'docker compose -p thereactapp up -d --build'
                 }
             }
         }

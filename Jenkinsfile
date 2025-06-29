@@ -2,11 +2,9 @@ pipeline {
     agent any
 
     environment {
-        // Define environment variables
         DOCKER_PROJECT_NAME = 'thereactapp'
-        TEST_TIMEOUT = '300' // 5 minutes timeout for tests
-        APP_URL = 'http://localhost:3000' // Your container maps 3000->80
-        CONTAINER_NAME = 'thereactapp-rinxo' // Your actual container name
+        APP_URL = 'http://localhost:3000'
+        CONTAINER_NAME = 'thereactapp-rinxo'
     }
 
     stages {
@@ -26,7 +24,6 @@ pipeline {
             steps {
                 dir('Rinxo') {
                     script {
-                        // Check if container already exists and is running
                         def containerExists = sh(
                             script: 'docker ps -q -f name=${CONTAINER_NAME}',
                             returnStdout: true
@@ -36,15 +33,10 @@ pipeline {
                             echo "Container ${CONTAINER_NAME} is already running. Skipping build."
                         } else {
                             echo "Building and starting application..."
-                            
-                            // Stop any existing containers first
                             sh 'docker compose -p ${DOCKER_PROJECT_NAME} down || true'
-                            
-                            // Build and start the application
                             sh 'docker compose -p ${DOCKER_PROJECT_NAME} up -d --build'
                         }
                         
-                        // Wait for application to be ready
                         echo 'Waiting for application to be ready...'
                         sh '''
                             timeout=60
@@ -65,14 +57,11 @@ pipeline {
                             fi
                         '''
                         
-                        // Apply nginx SPA fix if needed
                         echo 'Checking and applying SPA routing fix...'
                         sh '''
-                            # Check if nginx config has try_files directive
                             if ! docker exec ${CONTAINER_NAME} grep -q "try_files" /etc/nginx/conf.d/default.conf 2>/dev/null; then
                                 echo "Applying SPA routing fix to nginx config..."
                                 
-                                # Create the fixed nginx config
                                 cat > /tmp/nginx-spa-fix.conf << 'EOF'
 server {
     listen       80;
@@ -92,15 +81,9 @@ server {
 }
 EOF
                                 
-                                # Copy the fixed config to container
                                 docker cp /tmp/nginx-spa-fix.conf ${CONTAINER_NAME}:/etc/nginx/conf.d/default.conf
-                                
-                                # Reload nginx
                                 docker exec ${CONTAINER_NAME} nginx -s reload
-                                
                                 echo "SPA routing fix applied successfully"
-                                
-                                # Clean up temp file
                                 rm -f /tmp/nginx-spa-fix.conf
                             else
                                 echo "SPA routing fix already applied"
@@ -116,19 +99,15 @@ EOF
                 script {
                     echo 'Setting up test environment...'
                     
-                    // Install Python dependencies for testing
                     sh '''
-                        # Create virtual environment if it doesn't exist
                         if [ ! -d "test-env" ]; then
                             python3 -m venv test-env
                         fi
                         
-                        # Activate virtual environment and install dependencies
                         . test-env/bin/activate
                         pip install --upgrade pip
                         pip install selenium webdriver-manager
                         
-                        # Install Chrome if not present
                         if ! command -v google-chrome &> /dev/null; then
                             wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
                             sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
@@ -136,7 +115,6 @@ EOF
                             sudo apt install -y google-chrome-stable
                         fi
                         
-                        # Install ChromeDriver
                         if [ ! -f "/usr/local/bin/chromedriver" ]; then
                             CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d. -f1)
                             wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}/chromedriver_linux64.zip"
@@ -151,7 +129,6 @@ EOF
         stage('Create Test Script') {
             steps {
                 script {
-                    // Create the test script in the workspace
                     writeFile file: 'test_rinxo_app.py', text: '''
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -164,10 +141,7 @@ import sys
 import os
 
 def setup_headless_driver():
-    """Setup Chrome driver with headless configuration"""
     chrome_options = Options()
-    
-    # Essential headless options
     chrome_options.add_argument('--headless')
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
@@ -184,11 +158,10 @@ def setup_headless_driver():
         driver.implicitly_wait(10)
         return driver
     except Exception as e:
-        print(f"❌ Failed to initialize Chrome driver: {e}")
+        print(f"Failed to initialize Chrome driver: {e}")
         sys.exit(1)
 
 def safe_find_element(driver, by, value, timeout=10):
-    """Safely find element with timeout"""
     try:
         element = WebDriverWait(driver, timeout).until(
             EC.presence_of_element_located((by, value))
@@ -198,7 +171,6 @@ def safe_find_element(driver, by, value, timeout=10):
         return None
 
 def safe_click(driver, xpath, timeout=10):
-    """Safely click element with timeout"""
     try:
         element = WebDriverWait(driver, timeout).until(
             EC.element_to_be_clickable((By.XPATH, xpath))
@@ -209,28 +181,26 @@ def safe_click(driver, xpath, timeout=10):
         return False
 
 def test_page_loads(driver, url, expected_content, page_name):
-    """Test if a page loads correctly"""
     try:
-        print(f"  📡 Testing {page_name}...")
+        print(f"  Testing {page_name}...")
         driver.get(url)
         time.sleep(3)
         
         if expected_content in driver.page_source:
-            print(f"  ✅ {page_name} loaded successfully")
+            print(f"  SUCCESS: {page_name} loaded successfully")
             return True
         else:
             if "404" in driver.page_source or "Not Found" in driver.page_source:
-                print(f"  ❌ {page_name} returned 404")
+                print(f"  FAILED: {page_name} returned 404")
             else:
-                print(f"  ❌ {page_name} missing expected content")
+                print(f"  FAILED: {page_name} missing expected content")
             return False
     except Exception as e:
-        print(f"  ❌ {page_name} failed: {e}")
+        print(f"  FAILED: {page_name} error: {e}")
         return False
 
 def run_tests():
-    """Run comprehensive tests"""
-    print("🚀 RINXO APP AUTOMATED TESTS - JENKINS PIPELINE")
+    print("RINXO APP AUTOMATED TESTS - JENKINS PIPELINE")
     print("=" * 60)
     
     base_url = os.getenv('APP_URL', 'http://localhost:3000')
@@ -239,8 +209,7 @@ def run_tests():
     driver = setup_headless_driver()
     
     try:
-        # Test 0: Page Load Tests
-        print("\\nTest Suite 0: Page Availability")
+        print("\\nTest Suite: Page Availability")
         print("-" * 40)
         
         pages = [
@@ -261,19 +230,17 @@ def run_tests():
         successful_pages = [name for name, result in page_results.items() if result]
         failed_pages = [name for name, result in page_results.items() if not result]
         
-        print(f"\\n📊 Page Load Results:")
-        print(f"✅ Working: {len(successful_pages)}/{len(pages)} pages")
-        print(f"❌ Failed: {failed_pages if failed_pages else 'None'}")
+        print(f"\\nPage Load Results:")
+        print(f"Working: {len(successful_pages)}/{len(pages)} pages")
+        print(f"Failed: {failed_pages if failed_pages else 'None'}")
         
         if len(failed_pages) > 0:
-            print("\\n⚠️  Critical: Some pages are not loading. Stopping functional tests.")
+            print("\\nCritical: Some pages are not loading. Stopping functional tests.")
             return False
         
-        # Test 1: Login Functionality
-        print("\\nTest Suite 1: Login Functionality")
+        print("\\nTest Suite: Login Functionality")
         print("-" * 40)
         
-        # Valid Login Test
         try:
             driver.get(f"{base_url}/login")
             time.sleep(2)
@@ -289,15 +256,14 @@ def run_tests():
                 
                 if safe_click(driver, "//button[contains(text(), 'Sign In')]"):
                     time.sleep(3)
-                    print("  ✅ Valid login test completed")
+                    print("  SUCCESS: Valid login test completed")
                 else:
-                    print("  ❌ Login button not found")
+                    print("  FAILED: Login button not found")
             else:
-                print("  ❌ Login form fields not found")
+                print("  FAILED: Login form fields not found")
         except Exception as e:
-            print(f"  ❌ Login test failed: {e}")
+            print(f"  FAILED: Login test error: {e}")
         
-        # Invalid Login Test
         try:
             driver.get(f"{base_url}/login")
             time.sleep(2)
@@ -313,16 +279,15 @@ def run_tests():
                 
                 if safe_click(driver, "//button[contains(text(), 'Sign In')]"):
                     time.sleep(2)
-                    print("  ✅ Invalid login test completed")
+                    print("  SUCCESS: Invalid login test completed")
                 else:
-                    print("  ❌ Login button not found")
+                    print("  FAILED: Login button not found")
             else:
-                print("  ❌ Login form fields not found")
+                print("  FAILED: Login form fields not found")
         except Exception as e:
-            print(f"  ❌ Invalid login test failed: {e}")
+            print(f"  FAILED: Invalid login test error: {e}")
         
-        # Test 2: Signup Functionality
-        print("\\nTest Suite 2: Signup Functionality")
+        print("\\nTest Suite: Signup Functionality")
         print("-" * 40)
         
         try:
@@ -337,29 +302,27 @@ def run_tests():
                 if safe_click(driver, "//button[contains(text(), 'Continue')]"):
                     time.sleep(2)
                     if "Step 2 of 2" in driver.page_source:
-                        print("  ✅ Signup step 1 completed")
+                        print("  SUCCESS: Signup step 1 completed")
                         
-                        # Test step 2
                         password_field = safe_find_element(driver, By.ID, "password")
                         confirm_field = safe_find_element(driver, By.ID, "confirmPassword")
                         
                         if password_field and confirm_field:
                             password_field.send_keys('testpass123')
                             confirm_field.send_keys('testpass123')
-                            print("  ✅ Signup step 2 form filled")
+                            print("  SUCCESS: Signup step 2 form filled")
                         else:
-                            print("  ❌ Signup step 2 fields not found")
+                            print("  FAILED: Signup step 2 fields not found")
                     else:
-                        print("  ❌ Signup step 2 not reached")
+                        print("  FAILED: Signup step 2 not reached")
                 else:
-                    print("  ❌ Continue button not found")
+                    print("  FAILED: Continue button not found")
             else:
-                print("  ❌ Signup email field not found")
+                print("  FAILED: Signup email field not found")
         except Exception as e:
-            print(f"  ❌ Signup test failed: {e}")
+            print(f"  FAILED: Signup test error: {e}")
         
-        # Test 3: Navigation Tests
-        print("\\nTest Suite 3: Navigation")
+        print("\\nTest Suite: Navigation")
         print("-" * 40)
         
         try:
@@ -369,37 +332,36 @@ def run_tests():
             if safe_click(driver, "//button[contains(text(), 'Sign up')]"):
                 time.sleep(2)
                 if "Create your account" in driver.page_source:
-                    print("  ✅ Login to Signup navigation works")
+                    print("  SUCCESS: Login to Signup navigation works")
                     
                     if safe_click(driver, "//button[contains(text(), 'Sign in')]"):
                         time.sleep(2)
                         if "Welcome back" in driver.page_source:
-                            print("  ✅ Signup to Login navigation works")
+                            print("  SUCCESS: Signup to Login navigation works")
                         else:
-                            print("  ❌ Signup to Login navigation failed")
+                            print("  FAILED: Signup to Login navigation failed")
                     else:
-                        print("  ❌ Sign in button not found")
+                        print("  FAILED: Sign in button not found")
                 else:
-                    print("  ❌ Login to Signup navigation failed")
+                    print("  FAILED: Login to Signup navigation failed")
             else:
-                print("  ❌ Sign up button not found")
+                print("  FAILED: Sign up button not found")
         except Exception as e:
-            print(f"  ❌ Navigation test failed: {e}")
+            print(f"  FAILED: Navigation test error: {e}")
         
         print("\\n" + "=" * 60)
-        print("🎉 ALL TESTS COMPLETED!")
+        print("ALL TESTS COMPLETED!")
         print("=" * 60)
         
-        # Overall success check
         if len(successful_pages) == len(pages):
-            print("✅ OVERALL RESULT: SUCCESS - All critical tests passed!")
+            print("OVERALL RESULT: SUCCESS - All critical tests passed!")
             return True
         else:
-            print("❌ OVERALL RESULT: FAILURE - Some critical tests failed!")
+            print("OVERALL RESULT: FAILURE - Some critical tests failed!")
             return False
         
     except Exception as e:
-        print(f"❌ Critical test error: {e}")
+        print(f"Critical test error: {e}")
         return False
     finally:
         driver.quit()
@@ -417,7 +379,6 @@ if __name__ == "__main__":
                 script {
                     echo 'Running Selenium tests...'
                     
-                    // Run the tests with proper error handling
                     def testResult = sh(
                         script: '''
                             . test-env/bin/activate
@@ -428,10 +389,10 @@ if __name__ == "__main__":
                     )
                     
                     if (testResult != 0) {
-                        echo "⚠️ Some tests failed, but continuing pipeline..."
+                        echo "Some tests failed, but continuing pipeline..."
                         currentBuild.result = 'UNSTABLE'
                     } else {
-                        echo "✅ All tests passed successfully!"
+                        echo "All tests passed successfully!"
                     }
                 }
             }
@@ -440,26 +401,16 @@ if __name__ == "__main__":
         stage('Generate Test Report') {
             steps {
                 script {
-                    // Create a simple test report
                     sh '''
                         echo "# Rinxo App Test Report" > test_report.md
                         echo "**Build:** ${BUILD_NUMBER}" >> test_report.md
                         echo "**Date:** $(date)" >> test_report.md
                         echo "**Application URL:** ${APP_URL}" >> test_report.md
                         echo "" >> test_report.md
-                        
-                        if [ -f "test_results.log" ]; then
-                            echo "## Test Results" >> test_report.md
-                            echo '```' >> test_report.md
-                            cat test_results.log >> test_report.md
-                            echo '```' >> test_report.md
-                        else
-                            echo "## Test Results" >> test_report.md
-                            echo "Test completed. Check Jenkins console output for details." >> test_report.md
-                        fi
+                        echo "## Test Results" >> test_report.md
+                        echo "Test completed. Check Jenkins console output for details." >> test_report.md
                     '''
                     
-                    // Archive the test report
                     archiveArtifacts artifacts: 'test_report.md', allowEmptyArchive: true
                 }
             }
@@ -471,15 +422,12 @@ if __name__ == "__main__":
                     echo 'Performing final health check...'
                     
                     sh '''
-                        # Check if containers are still running
                         echo "=== Container Status ==="
                         docker ps -f name=${CONTAINER_NAME}
                         
-                        # Check application response
                         echo "=== Application Health ==="
                         curl -f ${APP_URL} || echo "Warning: Application health check failed"
                         
-                        # Check logs for errors
                         echo "=== Recent Logs ==="
                         docker logs ${CONTAINER_NAME} --tail=20 || true
                     '''
@@ -492,27 +440,17 @@ if __name__ == "__main__":
         always {
             script {
                 echo 'Pipeline completed. Performing cleanup...'
-                
-                // Clean up test environment but keep containers running
-                sh '''
-                    # Clean up test files
-                    rm -f test_rinxo_app.py
-                    
-                    # Optional: Clean up test environment
-                    # rm -rf test-env
-                '''
+                sh 'rm -f test_rinxo_app.py'
             }
         }
         
         success {
-            echo '🎉 Pipeline completed successfully! Application is deployed and tested.'
+            echo 'Pipeline completed successfully! Application is deployed and tested.'
         }
         
         failure {
             script {
-                echo '❌ Pipeline failed. Checking logs...'
-                
-                # Get container logs for debugging
+                echo 'Pipeline failed. Checking logs...'
                 sh '''
                     echo "=== Container Logs ==="
                     docker logs ${CONTAINER_NAME} --tail 20 || echo "Could not get container logs"
@@ -520,14 +458,11 @@ if __name__ == "__main__":
                     echo "=== Container Status ==="
                     docker ps -f name=${CONTAINER_NAME} || echo "Could not get container status"
                 '''
-                
-                // Optionally stop containers on failure
-                // sh 'docker compose -p ${DOCKER_PROJECT_NAME} down || true'
             }
         }
         
         unstable {
-            echo '⚠️ Pipeline completed with test failures. Application deployed but some tests failed.'
+            echo 'Pipeline completed with test failures. Application deployed but some tests failed.'
         }
     }
 }

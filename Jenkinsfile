@@ -120,59 +120,59 @@ EOF
                         pip install --upgrade pip
                         pip install selenium webdriver-manager
                         
-                        # Check if Chrome is already installed
-                        if command -v google-chrome &> /dev/null; then
-                            echo "Chrome is already installed"
-                            google-chrome --version
-                        else
-                            echo "Chrome not found. Trying to install..."
-                            
-                            # Try to install Chrome without sudo (if Jenkins has permissions)
-                            if sudo -n true 2>/dev/null; then
-                                echo "Installing Chrome with sudo..."
-                                wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-                                sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
-                                sudo apt update
-                                sudo apt install -y google-chrome-stable
-                            else
-                                echo "No sudo access. Trying alternative Chrome installation..."
+                        # Check Chrome installation more thoroughly
+                        echo "=== Chrome Detection ==="
+                        
+                        CHROME_FOUND=false
+                        
+                        # Check multiple Chrome locations
+                        for chrome_path in "/usr/bin/google-chrome" "/usr/bin/google-chrome-stable" "/usr/bin/chromium-browser" "/snap/bin/chromium" "google-chrome"; do
+                            echo "Checking: $chrome_path"
+                            if command -v "$chrome_path" >/dev/null 2>&1; then
+                                echo "Found Chrome command: $chrome_path"
                                 
-                                # Try downloading Chrome directly
-                                wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-                                if [ -f "google-chrome-stable_current_amd64.deb" ]; then
-                                    echo "Chrome downloaded. Attempting installation..."
-                                    sudo dpkg -i google-chrome-stable_current_amd64.deb || echo "Chrome installation failed, but continuing..."
-                                    sudo apt-get install -f || echo "Dependency fix failed, but continuing..."
+                                # Try to get version (with error handling)
+                                if $chrome_path --version >/dev/null 2>&1; then
+                                    echo "Chrome version: $($chrome_path --version 2>/dev/null || echo 'Version check failed')"
+                                    CHROME_FOUND=true
+                                    break
                                 else
-                                    echo "Chrome download failed. Will try using system Chrome or continue without it."
+                                    echo "Chrome found but version check failed for: $chrome_path"
                                 fi
                             fi
-                        fi
+                        done
                         
-                        # Check if ChromeDriver is available
-                        if command -v chromedriver &> /dev/null; then
-                            echo "ChromeDriver is already installed"
-                            chromedriver --version
-                        elif [ -f "/usr/local/bin/chromedriver" ]; then
-                            echo "ChromeDriver found in /usr/local/bin/"
-                            /usr/local/bin/chromedriver --version
+                        if [ "$CHROME_FOUND" = "true" ]; then
+                            echo "✅ Chrome is properly installed and accessible"
                         else
-                            echo "ChromeDriver not found. Trying to install..."
-                            
-                            # Use webdriver-manager to handle ChromeDriver
-                            python3 -c "
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-try:
-    driver_path = ChromeDriverManager().install()
-    print(f'ChromeDriver installed at: {driver_path}')
-except Exception as e:
-    print(f'ChromeDriver installation failed: {e}')
-"
+                            echo "⚠️ Chrome installation issues detected, but continuing..."
+                            echo "Will rely on webdriver-manager to handle Chrome"
                         fi
                         
-                        echo "Test environment setup completed"
+                        # Check ChromeDriver (webdriver-manager will handle this)
+                        echo "=== ChromeDriver Setup ==="
+                        echo "Using webdriver-manager for ChromeDriver - no manual installation needed"
+                        
+                        # Test webdriver-manager setup
+                        python3 -c "
+try:
+    from webdriver_manager.chrome import ChromeDriverManager
+    print('✅ webdriver-manager is ready')
+    
+    # Pre-download ChromeDriver (optional)
+    try:
+        driver_path = ChromeDriverManager().install()
+        print(f'✅ ChromeDriver pre-downloaded to: {driver_path}')
+    except Exception as e:
+        print(f'⚠️ ChromeDriver pre-download failed (will retry during test): {e}')
+        
+except ImportError as e:
+    print(f'❌ webdriver-manager import failed: {e}')
+except Exception as e:
+    print(f'⚠️ webdriver-manager setup issue: {e}')
+"
+                        
+                        echo "✅ Test environment setup completed"
                     '''
                 }
             }
@@ -208,49 +208,78 @@ def setup_headless_driver():
     chrome_options.add_argument('--disable-backgrounding-occluded-windows')
     chrome_options.add_argument('--disable-renderer-backgrounding')
     
+    print("🚀 Initializing Chrome WebDriver...")
+    
+    # Method 1: Try webdriver-manager (handles everything automatically)
     try:
-        # Try using webdriver-manager first
-        try:
-            from webdriver_manager.chrome import ChromeDriverManager
-            service = Service(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=chrome_options)
-            print("Using ChromeDriver from webdriver-manager")
-        except Exception as e:
-            print(f"webdriver-manager failed: {e}")
-            # Fallback to system ChromeDriver
-            driver = webdriver.Chrome(options=chrome_options)
-            print("Using system ChromeDriver")
-        
+        from webdriver_manager.chrome import ChromeDriverManager
+        print("  📦 Using webdriver-manager for ChromeDriver...")
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+        print("  ✅ Successfully initialized with webdriver-manager")
         driver.set_page_load_timeout(30)
         driver.implicitly_wait(10)
         return driver
     except Exception as e:
-        print(f"Failed to initialize Chrome driver: {e}")
-        print("Trying alternative Chrome binary locations...")
-        
-        # Try alternative Chrome binary paths
-        chrome_paths = [
-            "/usr/bin/google-chrome",
-            "/usr/bin/google-chrome-stable", 
-            "/usr/bin/chromium-browser",
-            "/snap/bin/chromium"
-        ]
-        
-        for chrome_path in chrome_paths:
-            if os.path.exists(chrome_path):
-                try:
-                    chrome_options.binary_location = chrome_path
-                    driver = webdriver.Chrome(options=chrome_options)
-                    print(f"Successfully using Chrome from: {chrome_path}")
-                    driver.set_page_load_timeout(30)
-                    driver.implicitly_wait(10)
-                    return driver
-                except Exception as path_e:
-                    print(f"Failed with {chrome_path}: {path_e}")
-                    continue
-        
-        print("All Chrome driver initialization attempts failed")
-        sys.exit(1)
+        print(f"  ⚠️ webdriver-manager method failed: {e}")
+    
+    # Method 2: Try system ChromeDriver
+    try:
+        print("  🔧 Trying system ChromeDriver...")
+        driver = webdriver.Chrome(options=chrome_options)
+        print("  ✅ Successfully initialized with system ChromeDriver")
+        driver.set_page_load_timeout(30)
+        driver.implicitly_wait(10)
+        return driver
+    except Exception as e:
+        print(f"  ⚠️ System ChromeDriver failed: {e}")
+    
+    # Method 3: Try specific Chrome binary paths
+    chrome_paths = [
+        "/usr/bin/google-chrome-stable",
+        "/usr/bin/google-chrome", 
+        "/usr/bin/chromium-browser",
+        "/snap/bin/chromium"
+    ]
+    
+    for chrome_path in chrome_paths:
+        if os.path.exists(chrome_path):
+            try:
+                print(f"  🔍 Trying Chrome binary: {chrome_path}")
+                chrome_options.binary_location = chrome_path
+                driver = webdriver.Chrome(options=chrome_options)
+                print(f"  ✅ Successfully using Chrome from: {chrome_path}")
+                driver.set_page_load_timeout(30)
+                driver.implicitly_wait(10)
+                return driver
+            except Exception as path_e:
+                print(f"  ⚠️ Failed with {chrome_path}: {path_e}")
+                continue
+    
+    # Method 4: Try with webdriver-manager and specific binary
+    for chrome_path in chrome_paths:
+        if os.path.exists(chrome_path):
+            try:
+                print(f"  🔄 Trying webdriver-manager + {chrome_path}")
+                from webdriver_manager.chrome import ChromeDriverManager
+                chrome_options.binary_location = chrome_path
+                service = Service(ChromeDriverManager().install())
+                driver = webdriver.Chrome(service=service, options=chrome_options)
+                print(f"  ✅ Success with webdriver-manager + {chrome_path}")
+                driver.set_page_load_timeout(30)
+                driver.implicitly_wait(10)
+                return driver
+            except Exception as combo_e:
+                print(f"  ⚠️ Combination method failed: {combo_e}")
+                continue
+    
+    print("  ❌ All Chrome driver initialization methods failed")
+    print("  💡 Available Chrome binaries:")
+    for chrome_path in chrome_paths:
+        exists = "✅" if os.path.exists(chrome_path) else "❌"
+        print(f"     {exists} {chrome_path}")
+    
+    sys.exit(1)
 
 def safe_find_element(driver, by, value, timeout=10):
     try:

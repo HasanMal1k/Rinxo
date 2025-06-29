@@ -450,9 +450,9 @@ if __name__ == "__main__":
                         
                         if [ -f "test_results.log" ]; then
                             echo "## Test Results" >> test_report.md
-                            echo "\`\`\`" >> test_report.md
+                            echo '```' >> test_report.md
                             cat test_results.log >> test_report.md
-                            echo "\`\`\`" >> test_report.md
+                            echo '```' >> test_report.md
                         else
                             echo "## Test Results" >> test_report.md
                             echo "Test completed. Check Jenkins console output for details." >> test_report.md

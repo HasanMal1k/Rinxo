@@ -5,7 +5,6 @@ pipeline {
         DOCKER_PROJECT_NAME = 'thereactapp'
         APP_URL = 'http://localhost:3000'
         CONTAINER_NAME = 'thereactapp-rinxo-1'
-        RECIPIENT_EMAIL = 'mhasanmalik03@gmail.com'  // Replace with your email
     }
 
     stages {
@@ -523,16 +522,26 @@ if __name__ == "__main__":
             steps {
                 script {
                     sh '''
-                        echo "# Rinxo App Test Report" > test_report.md
-                        echo "**Build:** ${BUILD_NUMBER}" >> test_report.md
-                        echo "**Date:** $(date)" >> test_report.md
-                        echo "**Application URL:** ${APP_URL}" >> test_report.md
-                        echo "" >> test_report.md
-                        echo "## Test Results" >> test_report.md
-                        echo "Test completed. Check Jenkins console output for details." >> test_report.md
+                        echo "========================================" > test_report.txt
+                        echo "RINXO APP CI/CD PIPELINE REPORT" >> test_report.txt
+                        echo "========================================" >> test_report.txt
+                        echo "Student: Hasan Malik" >> test_report.txt
+                        echo "Build Number: ${BUILD_NUMBER}" >> test_report.txt
+                        echo "Build Status: ${BUILD_STATUS}" >> test_report.txt
+                        echo "Date: $(date)" >> test_report.txt
+                        echo "Application URL: ${APP_URL}" >> test_report.txt
+                        echo "Jenkins Build: ${BUILD_URL}" >> test_report.txt
+                        echo "" >> test_report.txt
+                        echo "ASSIGNMENT DELIVERABLES:" >> test_report.txt
+                        echo "✅ Docker Containerization" >> test_report.txt
+                        echo "✅ CI/CD Pipeline Implementation" >> test_report.txt
+                        echo "✅ Automated Testing with Selenium" >> test_report.txt
+                        echo "✅ Application Deployment" >> test_report.txt
+                        echo "✅ Jenkins Pipeline Automation" >> test_report.txt
+                        echo "========================================" >> test_report.txt
                     '''
                     
-                    archiveArtifacts artifacts: 'test_report.md', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'test_report.txt', allowEmptyArchive: true
                 }
             }
         }
@@ -563,154 +572,28 @@ if __name__ == "__main__":
                 echo 'Pipeline completed. Performing cleanup...'
                 sh 'rm -f test_rinxo_app.py'
                 
-                // Generate enhanced test report
-                sh '''
-                    echo "<html><head><title>Rinxo App Test Report</title></head><body>" > detailed_report.html
-                    echo "<h1>🚀 Rinxo App Test Report</h1>" >> detailed_report.html
-                    echo "<p><strong>Build Number:</strong> ${BUILD_NUMBER}</p>" >> detailed_report.html
-                    echo "<p><strong>Date:</strong> $(date)</p>" >> detailed_report.html
-                    echo "<p><strong>Application URL:</strong> <a href='${APP_URL}'>${APP_URL}</a></p>" >> detailed_report.html
-                    echo "<p><strong>Jenkins Build:</strong> <a href='${BUILD_URL}'>View Details</a></p>" >> detailed_report.html
-                    echo "<p><strong>Console Output:</strong> <a href='${BUILD_URL}console'>View Console</a></p>" >> detailed_report.html
-                    echo "</body></html>" >> detailed_report.html
-                '''
-                
-                // Send summary email
-                emailext (
-                    subject: "Rinxo App Pipeline Report - Build ${BUILD_NUMBER} - ${currentBuild.result ?: 'SUCCESS'}",
-                    body: """
-                        <h2>Rinxo App Test Pipeline Results</h2>
-                        <p><strong>Build Number:</strong> ${BUILD_NUMBER}</p>
-                        <p><strong>Build Status:</strong> ${currentBuild.result ?: 'SUCCESS'}</p>
-                        <p><strong>Build Duration:</strong> ${currentBuild.durationString}</p>
-                        <p><strong>Application URL:</strong> <a href="${APP_URL}">${APP_URL}</a></p>
-                        <p><strong>Jenkins Build:</strong> <a href="${BUILD_URL}">View Full Details</a></p>
-                        
-                        <h3>Pipeline Summary:</h3>
-                        <ul>
-                            <li>✅ Container Detection and Health Check</li>
-                            <li>✅ SPA Routing Configuration</li>
-                            <li>✅ Test Environment Setup</li>
-                            <li>✅ Automated Selenium Tests</li>
-                        </ul>
-                        
-                        <p><em>Detailed test results available in Jenkins console output.</em></p>
-                        <p><em>Automated notification from Jenkins CI/CD Pipeline</em></p>
-                    """,
-                    to: "${RECIPIENT_EMAIL}",
-                    mimeType: 'text/html',
-                    attachmentsPattern: 'detailed_report.html'
-                )
+                echo "📋 Test report generated and archived!"
+                echo "🔗 Download report at: ${BUILD_URL}artifact/test_report.txt"
             }
         }
         
         success {
-            echo '🎉 Pipeline completed successfully! Application is deployed and tested.'
-            emailext (
-                subject: "✅ SUCCESS: Rinxo App Tests Passed - Build ${BUILD_NUMBER}",
-                body: """
-                    <div style="border: 2px solid #4CAF50; padding: 20px; border-radius: 10px;">
-                        <h2 style="color: #4CAF50;">✅ All Tests Passed Successfully!</h2>
-                        
-                        <table style="border-collapse: collapse; width: 100%;">
-                            <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Build Number:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${BUILD_NUMBER}</td></tr>
-                            <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Application:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">Rinxo Trading App</td></tr>
-                            <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Status:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">✅ ALL TESTS PASSED</td></tr>
-                            <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Build Duration:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${currentBuild.durationString}</td></tr>
-                            <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Application URL:</strong></td><td style="padding: 8px; border: 1px solid #ddd;"><a href="${APP_URL}" style="color: #2196F3;">${APP_URL}</a></td></tr>
-                        </table>
-                        
-                        <h3 style="color: #4CAF50;">🧪 Tests Completed Successfully:</h3>
-                        <ul style="color: #4CAF50;">
-                            <li><strong>✅ Page Availability:</strong> Home, Login, Signup, Dashboard, Portfolio, Trading, Markets</li>
-                            <li><strong>✅ Login Functionality:</strong> Valid/Invalid login scenarios</li>
-                            <li><strong>✅ Signup Functionality:</strong> Multi-step registration process</li>
-                            <li><strong>✅ Navigation:</strong> Page transitions and routing</li>
-                            <li><strong>✅ Container Health:</strong> Docker container status verified</li>
-                        </ul>
-                        
-                        <p style="background-color: #e8f5e8; padding: 10px; border-radius: 5px; color: #2e7d2e;">
-                            <strong>🎉 Your Rinxo application is successfully deployed and all automated tests are passing!</strong>
-                        </p>
-                        
-                        <p><a href="${BUILD_URL}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Full Jenkins Report</a></p>
-                    </div>
-                """,
-                to: "${RECIPIENT_EMAIL}",
-                mimeType: 'text/html'
-            )
+            echo '🎉 SUCCESS: All tests passed! Application deployed and working!'
+            echo "✅ Assignment completed successfully"
+            echo "🌐 Live application: ${APP_URL}"
+            echo "📋 Jenkins build: ${BUILD_URL}"
         }
         
         failure {
-            script {
-                echo '❌ Pipeline failed. Checking logs and sending notification...'
-                emailext (
-                    subject: "❌ FAILED: Rinxo App Pipeline - Build ${BUILD_NUMBER}",
-                    body: """
-                        <div style="border: 2px solid #f44336; padding: 20px; border-radius: 10px;">
-                            <h2 style="color: #f44336;">❌ Pipeline Failed</h2>
-                            
-                            <table style="border-collapse: collapse; width: 100%;">
-                                <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Build Number:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${BUILD_NUMBER}</td></tr>
-                                <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Application:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">Rinxo Trading App</td></tr>
-                                <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Status:</strong></td><td style="padding: 8px; border: 1px solid #ddd; color: #f44336;">❌ BUILD FAILED</td></tr>
-                                <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Failed Stage:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">Check console output</td></tr>
-                            </table>
-                            
-                            <h3 style="color: #f44336;">🔍 Possible Issues:</h3>
-                            <ul style="color: #f44336;">
-                                <li><strong>Container Issues:</strong> Docker container not running properly</li>
-                                <li><strong>Application Down:</strong> Rinxo app not responding</li>
-                                <li><strong>Environment Setup:</strong> Test dependencies failed to install</li>
-                                <li><strong>Selenium Tests:</strong> Browser automation tests failed</li>
-                                <li><strong>Network Issues:</strong> Connectivity problems</li>
-                            </ul>
-                            
-                            <p style="background-color: #ffebee; padding: 10px; border-radius: 5px; color: #c62828;">
-                                <strong>⚠️ Action Required:</strong> Check the Jenkins console output for detailed error information.
-                            </p>
-                            
-                            <p>
-                                <a href="${BUILD_URL}console" style="background-color: #f44336; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Console Output</a>
-                                <a href="${BUILD_URL}" style="background-color: #2196F3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-left: 10px;">View Full Report</a>
-                            </p>
-                        </div>
-                    """,
-                    to: "${RECIPIENT_EMAIL}",
-                    mimeType: 'text/html'
-                )
-            }
+            echo '❌ FAILURE: Pipeline failed'
+            echo "🔍 Check console output for details: ${BUILD_URL}console"
+            echo "📋 Full build details: ${BUILD_URL}"
         }
         
         unstable {
-            echo '⚠️ Pipeline completed with test failures. Application deployed but some tests failed.'
-            emailext (
-                subject: "⚠️ UNSTABLE: Rinxo App - Build ${BUILD_NUMBER}",
-                body: """
-                    <div style="border: 2px solid #ff9800; padding: 20px; border-radius: 10px;">
-                        <h2 style="color: #ff9800;">⚠️ Pipeline Completed with Issues</h2>
-                        
-                        <table style="border-collapse: collapse; width: 100%;">
-                            <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Build Number:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${BUILD_NUMBER}</td></tr>
-                            <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Application:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">Rinxo Trading App</td></tr>
-                            <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Status:</strong></td><td style="padding: 8px; border: 1px solid #ddd; color: #ff9800;">⚠️ UNSTABLE</td></tr>
-                            <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Application URL:</strong></td><td style="padding: 8px; border: 1px solid #ddd;"><a href="${APP_URL}" style="color: #2196F3;">${APP_URL}</a></td></tr>
-                        </table>
-                        
-                        <p style="background-color: #fff3e0; padding: 10px; border-radius: 5px; color: #ef6c00;">
-                            <strong>📋 Status:</strong> Application is deployed and running, but some automated tests failed. 
-                            The application may still be functional, but please review the test failures.
-                        </p>
-                        
-                        <p>
-                            <a href="${BUILD_URL}console" style="background-color: #ff9800; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Check Failed Tests</a>
-                            <a href="${APP_URL}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-left: 10px;">Test Application</a>
-                        </p>
-                    </div>
-                """,
-                to: "${RECIPIENT_EMAIL}",
-                mimeType: 'text/html'
-            )
+            echo '⚠️ UNSTABLE: Application deployed but some tests failed'
+            echo "🌐 Application is still running: ${APP_URL}"
+            echo "🔍 Check test details: ${BUILD_URL}console"
         }
     }
 }

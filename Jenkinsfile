@@ -110,27 +110,69 @@ EOF
                     echo 'Setting up test environment...'
                     
                     sh '''
+                        # Create virtual environment if it doesn't exist
                         if [ ! -d "test-env" ]; then
                             python3 -m venv test-env
                         fi
                         
+                        # Activate virtual environment and install dependencies
                         . test-env/bin/activate
                         pip install --upgrade pip
                         pip install selenium webdriver-manager
                         
-                        if ! command -v google-chrome &> /dev/null; then
-                            wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-                            sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
-                            sudo apt update
-                            sudo apt install -y google-chrome-stable
+                        # Check if Chrome is already installed
+                        if command -v google-chrome &> /dev/null; then
+                            echo "Chrome is already installed"
+                            google-chrome --version
+                        else
+                            echo "Chrome not found. Trying to install..."
+                            
+                            # Try to install Chrome without sudo (if Jenkins has permissions)
+                            if sudo -n true 2>/dev/null; then
+                                echo "Installing Chrome with sudo..."
+                                wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+                                sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+                                sudo apt update
+                                sudo apt install -y google-chrome-stable
+                            else
+                                echo "No sudo access. Trying alternative Chrome installation..."
+                                
+                                # Try downloading Chrome directly
+                                wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+                                if [ -f "google-chrome-stable_current_amd64.deb" ]; then
+                                    echo "Chrome downloaded. Attempting installation..."
+                                    sudo dpkg -i google-chrome-stable_current_amd64.deb || echo "Chrome installation failed, but continuing..."
+                                    sudo apt-get install -f || echo "Dependency fix failed, but continuing..."
+                                else
+                                    echo "Chrome download failed. Will try using system Chrome or continue without it."
+                                fi
+                            fi
                         fi
                         
-                        if [ ! -f "/usr/local/bin/chromedriver" ]; then
-                            CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d. -f1)
-                            wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}/chromedriver_linux64.zip"
-                            sudo unzip /tmp/chromedriver.zip chromedriver -d /usr/local/bin/
-                            sudo chmod +x /usr/local/bin/chromedriver
+                        # Check if ChromeDriver is available
+                        if command -v chromedriver &> /dev/null; then
+                            echo "ChromeDriver is already installed"
+                            chromedriver --version
+                        elif [ -f "/usr/local/bin/chromedriver" ]; then
+                            echo "ChromeDriver found in /usr/local/bin/"
+                            /usr/local/bin/chromedriver --version
+                        else
+                            echo "ChromeDriver not found. Trying to install..."
+                            
+                            # Use webdriver-manager to handle ChromeDriver
+                            python3 -c "
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+try:
+    driver_path = ChromeDriverManager().install()
+    print(f'ChromeDriver installed at: {driver_path}')
+except Exception as e:
+    print(f'ChromeDriver installation failed: {e}')
+"
                         fi
+                        
+                        echo "Test environment setup completed"
                     '''
                 }
             }
@@ -142,6 +184,7 @@ EOF
                     writeFile file: 'test_rinxo_app.py', text: '''
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -161,14 +204,52 @@ def setup_headless_driver():
     chrome_options.add_argument('--disable-web-security')
     chrome_options.add_argument('--remote-debugging-port=9222')
     chrome_options.add_argument('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+    chrome_options.add_argument('--disable-background-timer-throttling')
+    chrome_options.add_argument('--disable-backgrounding-occluded-windows')
+    chrome_options.add_argument('--disable-renderer-backgrounding')
     
     try:
-        driver = webdriver.Chrome(options=chrome_options)
+        # Try using webdriver-manager first
+        try:
+            from webdriver_manager.chrome import ChromeDriverManager
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=chrome_options)
+            print("Using ChromeDriver from webdriver-manager")
+        except Exception as e:
+            print(f"webdriver-manager failed: {e}")
+            # Fallback to system ChromeDriver
+            driver = webdriver.Chrome(options=chrome_options)
+            print("Using system ChromeDriver")
+        
         driver.set_page_load_timeout(30)
         driver.implicitly_wait(10)
         return driver
     except Exception as e:
         print(f"Failed to initialize Chrome driver: {e}")
+        print("Trying alternative Chrome binary locations...")
+        
+        # Try alternative Chrome binary paths
+        chrome_paths = [
+            "/usr/bin/google-chrome",
+            "/usr/bin/google-chrome-stable", 
+            "/usr/bin/chromium-browser",
+            "/snap/bin/chromium"
+        ]
+        
+        for chrome_path in chrome_paths:
+            if os.path.exists(chrome_path):
+                try:
+                    chrome_options.binary_location = chrome_path
+                    driver = webdriver.Chrome(options=chrome_options)
+                    print(f"Successfully using Chrome from: {chrome_path}")
+                    driver.set_page_load_timeout(30)
+                    driver.implicitly_wait(10)
+                    return driver
+                except Exception as path_e:
+                    print(f"Failed with {chrome_path}: {path_e}")
+                    continue
+        
+        print("All Chrome driver initialization attempts failed")
         sys.exit(1)
 
 def safe_find_element(driver, by, value, timeout=10):

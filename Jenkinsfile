@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_PROJECT_NAME = 'thereactapp'
         APP_URL = 'http://localhost:3000'
-        CONTAINER_NAME = 'thereactapp-rinxo'
+        CONTAINER_NAME = 'thereactapp-rinxo-1'
     }
 
     stages {
@@ -24,17 +24,27 @@ pipeline {
             steps {
                 dir('Rinxo') {
                     script {
-                        def containerExists = sh(
-                            script: 'docker ps -q -f name=${CONTAINER_NAME}',
+                        // Find the actual container name dynamically
+                        def containerName = sh(
+                            script: 'docker ps --format "{{.Names}}" | grep thereactapp-rinxo',
                             returnStdout: true
                         ).trim()
                         
-                        if (containerExists) {
-                            echo "Container ${CONTAINER_NAME} is already running. Skipping build."
+                        if (containerName) {
+                            echo "Found running container: ${containerName}"
+                            env.ACTUAL_CONTAINER_NAME = containerName
                         } else {
-                            echo "Building and starting application..."
+                            echo "No running container found. Building and starting application..."
                             sh 'docker compose -p ${DOCKER_PROJECT_NAME} down || true'
                             sh 'docker compose -p ${DOCKER_PROJECT_NAME} up -d --build'
+                            
+                            // Get the new container name
+                            containerName = sh(
+                                script: 'docker ps --format "{{.Names}}" | grep thereactapp-rinxo',
+                                returnStdout: true
+                            ).trim()
+                            env.ACTUAL_CONTAINER_NAME = containerName
+                            echo "New container started: ${containerName}"
                         }
                         
                         echo 'Waiting for application to be ready...'
@@ -52,14 +62,14 @@ pipeline {
                             
                             if [ $timeout -le 0 ]; then
                                 echo "Application failed to start within timeout"
-                                docker logs ${CONTAINER_NAME} --tail 20 || true
+                                docker logs ${ACTUAL_CONTAINER_NAME} --tail 20 || true
                                 exit 1
                             fi
                         '''
                         
                         echo 'Checking and applying SPA routing fix...'
                         sh '''
-                            if ! docker exec ${CONTAINER_NAME} grep -q "try_files" /etc/nginx/conf.d/default.conf 2>/dev/null; then
+                            if ! docker exec ${ACTUAL_CONTAINER_NAME} grep -q "try_files" /etc/nginx/conf.d/default.conf 2>/dev/null; then
                                 echo "Applying SPA routing fix to nginx config..."
                                 
                                 cat > /tmp/nginx-spa-fix.conf << 'EOF'
@@ -81,8 +91,8 @@ server {
 }
 EOF
                                 
-                                docker cp /tmp/nginx-spa-fix.conf ${CONTAINER_NAME}:/etc/nginx/conf.d/default.conf
-                                docker exec ${CONTAINER_NAME} nginx -s reload
+                                docker cp /tmp/nginx-spa-fix.conf ${ACTUAL_CONTAINER_NAME}:/etc/nginx/conf.d/default.conf
+                                docker exec ${ACTUAL_CONTAINER_NAME} nginx -s reload
                                 echo "SPA routing fix applied successfully"
                                 rm -f /tmp/nginx-spa-fix.conf
                             else
@@ -423,13 +433,13 @@ if __name__ == "__main__":
                     
                     sh '''
                         echo "=== Container Status ==="
-                        docker ps -f name=${CONTAINER_NAME}
+                        docker ps -f name=thereactapp-rinxo
                         
                         echo "=== Application Health ==="
                         curl -f ${APP_URL} || echo "Warning: Application health check failed"
                         
                         echo "=== Recent Logs ==="
-                        docker logs ${CONTAINER_NAME} --tail=20 || true
+                        docker logs ${ACTUAL_CONTAINER_NAME} --tail=20 || true
                     '''
                 }
             }
@@ -453,10 +463,10 @@ if __name__ == "__main__":
                 echo 'Pipeline failed. Checking logs...'
                 sh '''
                     echo "=== Container Logs ==="
-                    docker logs ${CONTAINER_NAME} --tail 20 || echo "Could not get container logs"
+                    docker logs ${ACTUAL_CONTAINER_NAME} --tail 20 || echo "Could not get container logs"
                     
                     echo "=== Container Status ==="
-                    docker ps -f name=${CONTAINER_NAME} || echo "Could not get container status"
+                    docker ps -f name=thereactapp-rinxo || echo "Could not get container status"
                 '''
             }
         }

@@ -11,7 +11,9 @@ COPY . .
 
 RUN npm run build
 
-FROM nginx:alpine as production
+
+
+FROM nginx:alpine AS production
 
 EXPOSE 80
 

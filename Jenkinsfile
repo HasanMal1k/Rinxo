@@ -5,7 +5,7 @@ pipeline {
         DOCKER_PROJECT_NAME = 'thereactapp'
         APP_URL = 'http://localhost:3000'
         CONTAINER_NAME = 'thereactapp-rinxo-1'
-        RECIPIENT_EMAIL = 'hasanmalik03@gmail.com'  // Replace with your email
+        RECIPIENT_EMAIL = 'mhasanmalik03@gmail.com'  // Replace with your email
     }
 
     stages {

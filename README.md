@@ -12,3 +12,5 @@
 * Prices displayed are **real-time and accurate**, but chart visualizations are placeholders
 
 This project focused primarily on frontend design and functionality. Backend integration was out of scope, but the structure allows for future extension.
+
+## Live Demo: https://rinxo.vercel.app/

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 function Hero() {
   return (
@@ -24,12 +25,18 @@ function Hero() {
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4 mt-4">
-            <button className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 py-4 px-8 text-lg font-semibold rounded-lg transition-all text-gray-800 shadow-lg shadow-yellow-500/20 flex items-center justify-center">
-              <a href="/login">Get Started Now <ArrowRight className="ml-2 h-5 w-5" /></a>
-            </button>
-            <button className="bg-transparent border border-gray-600 hover:border-gray-400 py-4 px-8 text-lg font-semibold rounded-lg transition-all text-white hover:bg-gray-800/50">
-              <a href="/markets">View Markets</a>
-            </button>
+            <Link 
+              to="/login" 
+              className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 py-4 px-8 text-lg font-semibold rounded-lg transition-all text-gray-800 shadow-lg shadow-yellow-500/20 flex items-center justify-center min-w-[200px]"
+            >
+              Get Started Now <ArrowRight className="ml-2 h-5 w-5" />
+            </Link>
+            <Link 
+              to="/markets" 
+              className="bg-transparent border border-gray-600 hover:border-gray-400 py-4 px-8 text-lg font-semibold rounded-lg transition-all text-white hover:bg-gray-800/50 flex items-center justify-center min-w-[160px]"
+            >
+              View Markets
+            </Link>
           </div>
           
           {/* Stats */}
